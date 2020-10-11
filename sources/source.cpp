@@ -1,3 +1,3 @@
-// Copyright 2018 Your Name <your_email>
+// Copyright 2020 Petr Portnov <gh@progrm-jarvis.ru>
 
 #include <header.hpp>
