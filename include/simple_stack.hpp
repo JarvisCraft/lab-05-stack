@@ -50,37 +50,35 @@ namespace simple_stack {
     private:
         struct Node {
             value_t value;
-            Node *previous, *next;
+            Node *previous;
         };
 
         ::std::size_t size_;
-        Node *tail_, *head_;
+        Node *head_;
     };
 
     template <typename Value_T>
-    Stack<Value_T>::Stack() : size_(0), tail_(nullptr), head_(nullptr) {}
+    Stack<Value_T>::Stack() : size_(0),  head_(nullptr) {}
 
     template <typename Value_T>
     Stack<Value_T>::~Stack() {
-        auto current = tail_;
-        while (current) {
-            auto next = current->next;
-            delete current;
-            current = next;
+        auto top = head_;
+        while (top != nullptr) {
+            auto next = top->previous;
+            delete top;
+            top = next;
         }
     }
 
     template <typename Value_T>
     Stack<Value_T>::Stack(Stack&& original) noexcept
         : size_(::std::exchange(original.size_, 0)),
-          tail_(::std::exchange(original.tail_), nullptr),
           head_(::std::exchange(original.head_, nullptr)) {}
 
     template <typename Value_T>
     Stack<Value_T>& Stack<Value_T>::operator=(Stack&& original) noexcept {
         if (&original != this) {
             ::std::swap(size_, original.size_);
-            ::std::swap(tail_, original.tail_);
             ::std::swap(head_, original.head_);
         }
 
@@ -109,71 +107,39 @@ namespace simple_stack {
     void Stack<Value_T>::push(const_reference_t value) {
         static_assert(::std::is_copy_constructible<value_t>::value);
 
-        if (size_ == 0) {
-            tail_ = head_ = new Node{::std::move(value), nullptr, nullptr};
-            size_ = 1;
-        } else {
-            head_ = new Node{::std::move(value), head_, nullptr};
-            ++size_;
-        }
+        head_ = new Node{value, head_};
+        ++size_;
     }
 
     template <typename Value_T>
     void Stack<Value_T>::push(rvalue_reference_t value) {
         static_assert(::std::is_move_constructible<value_t>::value);
 
-        if (size_ == 0) {
-            tail_ = head_ = new Node{value, nullptr, nullptr};
-            size_ = 1;
-        } else {
-            auto const old_head = head_;
-            old_head->next = head_ = new Node{value, head_, nullptr};
-            ++size_;
-        }
+        head_ = new Node{::std::move(value), head_};
+        ++size_;
     }
 
     template <typename Value_T>
     template <typename... Args_T>
     void Stack<Value_T>::push_emplace(Args_T&&... args) {
-        if (size_ == 0) {
-            tail_ = head_ = new Node{Value_T{::std::forward<Args_T>(args)...}, nullptr, nullptr};
-            size_ = 1;
-        } else {
-            auto const old_head = head_;
-            old_head->next = head_ = new Node{Value_T{::std::forward<Args_T>(args)...}, head_, nullptr};
-            ++size_;
-        }
+        head_ = new Node{Value_T{::std::forward<Args_T>(args)...}, head_};
+        ++size_;
     }
 
     template <typename Value_T>
     void Stack<Value_T>::pop() {
-        auto const size = size_;
-        switch (size) {
-            case 0: return; // no-op
-            case 1: {
-                delete head_;
+        auto const old_head = head_;
+        if (old_head == nullptr) return; // no-op
 
-                tail_ = head_ = nullptr;
-                size_ = 0;
-
-                return;
-            }
-            case 2: {
-                delete head_;
-
-                (head_ = tail_)->next = nullptr;
-                size_ = 1;
-
-                return;
-            }
-            default: {
-                auto const old_head = head_;
-                head_ = old_head->previous;
-                delete old_head;
-
-                size_ = size - 1;
-            }
+        auto new_head = old_head->previous;
+        if (new_head == nullptr) { // size was 1
+            head_ = nullptr;
+            size_ = 0;
+        } else {
+            head_ = new_head;
+            --size_;
         }
+        delete old_head;
     }
 } // namespace simple_stack
 
