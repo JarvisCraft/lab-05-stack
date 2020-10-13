@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 
 namespace simple_stack {
 
@@ -52,6 +53,36 @@ namespace simple_stack {
         ::std::size_t size_;
         Node *tail_, *head_;
     };
+
+    template <typename Value_T>
+    Stack<Value_T>::Stack() : size_(0), tail_(nullptr), head_(nullptr) {}
+
+    template <typename Value_T>
+    Stack<Value_T>::~Stack() {
+        auto current = tail_;
+        while (current) {
+            auto next = current->next;
+            delete current;
+            current = next;
+        }
+    }
+
+    template <typename Value_T>
+    Stack<Value_T>::Stack(Stack&& original) noexcept
+        : size_(::std::exchange(original.size_, 0)),
+          tail_(::std::exchange(original.tail_), nullptr),
+          head_(::std::exchange(original.head_, nullptr)) {}
+
+    template <typename Value_T>
+    Stack<Value_T>& Stack<Value_T>::operator=(Stack&& original) noexcept {
+        if (&original != this) {
+            ::std::swap(size_, original.size_);
+            ::std::swap(tail_, original.tail_);
+            ::std::swap(head_, original.head_);
+        }
+
+        return *this;
+    }
 } // namespace simple_stack
 
 #endif // INCLUDE_SIMPLE_STACK_HPP_
